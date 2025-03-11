@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # etcd 服务
+  etcd:
+    image: bitnami/etcd:latest
+    container_name: etcd
+    restart: always
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    networks:
+      - apisix-net
+
+  # APISIX 服务
+  apisix:
+    image: apache/apisix:3.2.0-centos
+    container_name: apisix
+    restart: always
+    ports:
+      - "9080:9080"
+      - "9443:9443"
+      - "9181:9181"
+      - "9182:9182"
+      - "9091:9091"
+      - "9092:9092"
+    volumes:
+      - ./fish1994/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./fish1994/logs:/usr/local/apisix/logs
+    depends_on:
+      - etcd
+    networks:
+      - apisix-net
+
+  # APISIX Dashboard 服务
+  apisix-dashboard:
+    image: apache/apisix-dashboard:3.0.1-centos
+    container_name: apisix-dashboard
+    restart: always
+    ports:
+      - "9000:9000"
+    networks:
+      - apisix-net
+
+  # Prometheus 服务
+  prometheus:
+    image: prom/prometheus:v2.25.0
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    networks:
+      - apisix-net
+
+  # Grafana 服务
+  grafana:
+    image: grafana/grafana:7.3.7
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - apisix-net
+
+networks:
+  apisix-net:
+    driver: bridge
